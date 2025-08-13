@@ -33,8 +33,10 @@ class Edit extends Component
     {
         $this->validate();
         if ($this->logo) {
-            if ($this->company->logo)  Storage::disk('public')->delete($this->company->logo);
-            $this->company->logo = $this->logo->store('companies', 'public');
+            if ($this->company->logo) {
+               Storage::delete($this->company->logo);
+            };
+            $this->company->logo = $this->logo->store('companies');
         }
         $this->company->save();
 
@@ -44,8 +46,8 @@ class Edit extends Component
 
     public function render()
     {
-        if(!auth()->user()->hasCompany($this->company->id)){
-            abort(403,"You cannot edit this company");
+        if (!auth()->user()->hasCompany($this->company->id)) {
+            abort(403, "You cannot edit this company");
         }
         return view('livewire.admin.companies.edit');
     }

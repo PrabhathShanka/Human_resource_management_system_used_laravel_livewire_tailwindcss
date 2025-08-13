@@ -24,7 +24,7 @@ class Payroll extends Model
 
     public function getMonthYearAttribute()
     {
-        return $this->month . '-' . $this->year;
+        return $this->year . '-' . $this->month;
     }
 
     public function getMonthFormattedAttribute()

@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Contracts;
 
 use App\Models\Contract;
 use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -34,8 +35,14 @@ class Create extends Component
 
     public function selectEmployee($id)
     {
-        $this->contract->employee_id = $id;
-        $this->search = $this->contract->employee->name;
+        $employee = Employee::with(['designation.department'])->findOrFail($id);
+
+        $this->contract->employee_id = $employee->id;
+        $this->search = $employee->name;
+
+        // Auto-fill department and designation
+        $this->department_id = $employee->designation?->department_id;
+        $this->contract->designation_id = $employee->designation_id;
     }
 
     public function save()
@@ -51,9 +58,10 @@ class Create extends Component
 
     public function render()
     {
-        $employees =  Employee::inCompany()->searchByName($this->search)->get();
+        $employees = Employee::inCompany()->searchByName($this->search)->get();
         $departments = Department::inCompany()->get();
-        $designations = $this->department_id ? Department::find($this->department_id)->designations :  collect();
+        $designations = Designation::inCompany()->get();
+
         return view('livewire.admin.contracts.create', [
             'employees' => $employees,
             'departments' => $departments,

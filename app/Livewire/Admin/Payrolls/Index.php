@@ -19,15 +19,24 @@ class Index extends Component
     public function rules()
     {
         return [
-            'monthYear' => 'required',
+            'monthYear' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $selectedDate = Carbon::createFromFormat('Y-m', $value);
+                    $currentDate = Carbon::now()->startOfMonth();
+
+                    if ($selectedDate->greaterThanOrEqualTo($currentDate)) {
+                        $fail('Payroll can only be generated for past months.');
+                    }
+                },
+            ],
         ];
     }
 
     public function viewPayroll($id)
     {
         $payroll = Payroll::inCompany()->find($id);
-        $this->redirectIntended(route('payrolls.show', $payroll),true);
-
+        $this->redirectIntended(route('payrolls.show', $payroll), true);
     }
 
     public function generatePayroll()

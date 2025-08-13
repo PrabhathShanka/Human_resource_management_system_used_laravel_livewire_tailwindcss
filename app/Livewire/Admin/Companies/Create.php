@@ -20,7 +20,7 @@ class Create extends Component
             'company.name' => 'required|string|max:255',
             'company.email' => 'required|email|max:255',
             'company.website' => 'required|url|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:20048',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ];
     }
 
@@ -33,7 +33,7 @@ class Create extends Component
     {
         $this->validate();
         if($this->logo){
-            $this->company->logo = $this->logo->store('companies', 'public');
+            $this->company->logo = $this->logo->store('companies');
         }
         $this->company->save();
         $this->company->users()->attach(Auth::user()->id);

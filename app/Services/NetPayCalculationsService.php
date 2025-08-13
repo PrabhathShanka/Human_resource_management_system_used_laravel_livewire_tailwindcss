@@ -4,84 +4,101 @@ namespace App\Services;
 
 class NetPayCalculationsService
 {
+    public $gross_salary_monthly;
+
+    public function __construct($gross_salary_monthly)
+    {
+        $this->gross_salary_monthly = $gross_salary_monthly;
+    }
+
     /**
-     * Create a new class instance.
+     * EPF deduction (Employee) - 8% of gross salary
      */
-
-    public $gross_salary;
-
-    public function __construct($gross_salary)
+    public function getEpfDeduction()
     {
-        $this->gross_salary = $gross_salary;
+        return round($this->gross_salary_monthly * 0.08, 2);
     }
 
-    public function getNssfDeduction()
+    /**
+     * ETF deduction (Employee) - 3% of gross salary
+     */
+    public function getEtfDeduction()
     {
-        $max = 4320;
-
-        return min($this->gross_salary * 0.06,$max);
+        return round($this->gross_salary_monthly * 0.03, 2);
     }
 
-    public function getShifDeduction()
+    /**
+     * Annual taxable income (after EPF + ETF)
+     */
+    public function getTaxableIncomeAnnual()
     {
-        return max($this->gross_salary * 0.0275, 300);
+        $annualGross = $this->gross_salary_monthly * 12;
+        $annualDeductions = ($this->getEpfDeduction() + $this->getEtfDeduction()) * 12;
+        return max($annualGross - $annualDeductions, 0);
     }
 
-    public function getAhlDeduction()
+    /**
+     * Annual Personal Income Tax (PIT / APIT)
+     * Based on Sri Lanka Inland Revenue Dept. tax brackets from 01 April 2025
+     */
+    public function getAnnualPIT()
     {
-        return $this->gross_salary * 0.015;
-    }
+        $income = $this->getTaxableIncomeAnnual();
+        $tax = 0;
 
-    public function getDeductions()
-    {
-        return $this->getNssfDeduction() + $this->getShifDeduction() + $this->getAhlDeduction() + $this->getPaye();
-    }
-
-    public function getTaxableIncome()
-    {
-        return $this->gross_salary - ($this->getNssfDeduction() + $this->getShifDeduction() + $this->getAhlDeduction());
-    }
-
-    public function getPaye()
-    {
-        $level1 = [288000 / 12, 0.1];
-        $level2 = [388000 / 12, 0.25];
-        $level3 = [600000 / 12, 0.3];
-        $level4 = [960000 / 12, 0.325];
-        $level5 = [INF / 0.35];
-
-        $taxableIncome = $this->getTaxableIncome();
-        $paye = 0;
-
-        if ($taxableIncome <= $level1[0]) {
-            $paye = $taxableIncome * $level1[1];
-        } elseif ($taxableIncome <= $level2[0]) {
-            $paye = ($level1[0] * $level1[1]) + (($taxableIncome - $level1[0]) * $level2[1]);
-        } elseif ($taxableIncome <= $level3[0]) {
-            $paye = ($level1[0] * $level1[1]) + (($level2[0] - $level1[0]) * $level2[1]) + (($taxableIncome - $level2[0]) * $level3[1]);
-        } elseif ($taxableIncome <= $level4[0]) {
-            $paye = ($level1[0] * $level1[1]) + (($level2[0] - $level1[0]) * $level2[1]) + (($level3[0] - $level2[0]) * $level3[1]) + (($taxableIncome - $level3[0]) * $level4[1]);
-        } else {
-            //$paye = ($level1[0] * $level1[1]) + (($level2[0] - $level1[0]) * $level2[1]) + (($level3[0] - $level2[0]) * $level3[1]) + (($level4[0] - $level3[0]) * $level5[1]) + (($taxableIncome - $level4[0]) * $level5[1]);
-               $paye = ($level1[0] * $level1[1]) +
-                (($level2[0] - $level1[0]) * $level2[1]) +
-                (($level3[0] - $level2[0]) * $level3[1]) +
-                (($level4[0] - $level3[0]) * $level4[1]) +
-                (($taxableIncome - $level4[0]) * $level5[1]);
+        // Tax-free threshold
+        if ($income <= 1800000) {
+            return 0;
         }
 
-        $relief = 2400;
-        // $insuranceRelief = 0.15 * $this->getShifDeduction();
+        // Define brackets (limit, rate)
+        $brackets = [
+            [2800000, 0.06],  // First 1,000,000 after threshold @ 6%
+            [3300000, 0.18],  // Next 500,000 @ 18%
+            [3800000, 0.24],  // Next 500,000 @ 24%
+            [4300000, 0.30],  // Next 500,000 @ 30%
+            [INF,      0.36]  // Above @ 36%
+        ];
 
-        $paye = $paye - $relief;
-        $paye = max($paye, 0);
+        $prev_limit = 1800000;
 
-        return $paye;
+        foreach ($brackets as [$limit, $rate]) {
+            if ($income > $prev_limit) {
+                $band = min($income, $limit) - $prev_limit;
+                $tax += $band * $rate;
+                $prev_limit += $band;
+            }
+        }
+
+        return round($tax, 2);
     }
 
-    public function getNetPay()
+    /**
+     * Monthly PIT
+     */
+    public function getMonthlyPIT()
     {
-        return $this->gross_salary - $this->getDeductions();
+        return round($this->getAnnualPIT() / 12, 2);
     }
 
+    /**
+     * Total deductions for the month
+     */
+    public function getDeductionsMonthly()
+    {
+        return round(
+            $this->getEpfDeduction() +
+                $this->getEtfDeduction() +
+                $this->getMonthlyPIT(),
+            2
+        );
+    }
+
+    /**
+     * Net salary for the month
+     */
+    public function getNetPayMonthly()
+    {
+        return round($this->gross_salary_monthly - $this->getDeductionsMonthly(), 2);
+    }
 }
