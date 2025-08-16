@@ -101,9 +101,9 @@
                     <flux:navlist.item icon="users" :href="route('payrolls.index')"
                         :current="request()->routeIs('payrolls.*')" wire:navigate>{{ __('Payrolls') }}
                     </flux:navlist.item>
-                    <flux:navlist.item icon="users" :href="route('payrolls.index')"
+                    {{--  <flux:navlist.item icon="users" :href="route('payrolls.index')"
                         :current="request()->routeIs('payrolls.*')" wire:navigate>{{ __('Payroll Payments') }}
-                    </flux:navlist.item>
+                    </flux:navlist.item>  --}}
                 </flux:navlist.group>
             @endif
 
